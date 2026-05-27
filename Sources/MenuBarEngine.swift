@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 
 @MainActor
 public final class MenuBarEngine: NSObject {
@@ -7,8 +8,17 @@ public final class MenuBarEngine: NSObject {
     private var baseLogoImageDark: NSImage?
     private var baseLogoImageLight: NSImage?
     private var logoRotationAngle: CGFloat = 0.0
+    private let bridge: MediaBridge
     
-    public override init() {
+    private var popover: NSPopover!
+    private var rightClickMenu: NSMenu!
+    
+    private var latestState: PlayerState = .notRunning
+    private var latestLyrics: [LyricLine] = []
+    private var latestPosition: Double = 0
+    
+    public init(bridge: MediaBridge) {
+        self.bridge = bridge
         super.init()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         
@@ -17,8 +27,11 @@ public final class MenuBarEngine: NSObject {
             button.imagePosition = .imageLeft
             button.lineBreakMode = .byClipping
             button.alignment = .left
+            button.action = #selector(handleStatusItemClick(_:))
+            button.target = self
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
-        setupMenu()
+        setupPopoverAndMenu()
     }
     
     private func getMusicIcon() -> NSImage? {
@@ -79,8 +92,8 @@ public final class MenuBarEngine: NSObject {
         return resized
     }
     
-    private func setupMenu() {
-        let menu = NSMenu()
+    private func setupPopoverAndMenu() {
+        rightClickMenu = NSMenu()
         
         let toggleItem = NSMenuItem(
             title: "Show Lyrics",
@@ -89,9 +102,9 @@ public final class MenuBarEngine: NSObject {
         )
         toggleItem.target = self
         toggleItem.state = areLyricsEnabled ? .on : .off
-        menu.addItem(toggleItem)
+        rightClickMenu.addItem(toggleItem)
         
-        menu.addItem(NSMenuItem.separator())
+        rightClickMenu.addItem(NSMenuItem.separator())
         
         let prefsItem = NSMenuItem(
             title: "Preferences...",
@@ -99,7 +112,7 @@ public final class MenuBarEngine: NSObject {
             keyEquivalent: ","
         )
         prefsItem.target = self
-        menu.addItem(prefsItem)
+        rightClickMenu.addItem(prefsItem)
         
         let quitItem = NSMenuItem(
             title: "Quit",
@@ -107,9 +120,54 @@ public final class MenuBarEngine: NSObject {
             keyEquivalent: "q"
         )
         quitItem.target = NSApp
-        menu.addItem(quitItem)
+        rightClickMenu.addItem(quitItem)
         
-        statusItem.menu = menu
+        popover = NSPopover()
+        popover.behavior = .transient
+        updatePopoverContent()
+    }
+    
+    @objc private func handleStatusItemClick(_ sender: NSStatusBarButton) {
+        let event = NSApp.currentEvent!
+        let enableDropdown = UserDefaults.standard.object(forKey: "enableDropdownUI") == nil ? true : UserDefaults.standard.bool(forKey: "enableDropdownUI")
+        
+        if event.type == .rightMouseUp || !enableDropdown {
+            rightClickMenu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height), in: sender)
+        } else {
+            if popover.isShown {
+                popover.performClose(sender)
+            } else {
+                updatePopoverContent()
+                popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
+                popover.contentViewController?.view.window?.makeKey()
+            }
+        }
+    }
+    
+    private func updatePopoverContent() {
+        var currentTrack: Track? = nil
+        var isPlaying = false
+        if case let .playing(t, _) = latestState {
+            currentTrack = t
+            isPlaying = true
+        } else if case let .paused(t, _) = latestState {
+            currentTrack = t
+            isPlaying = false
+        }
+        
+        let view = LyricsDropdownView(
+            currentTrack: currentTrack,
+            isPlaying: isPlaying,
+            lyrics: latestLyrics,
+            currentPosition: latestPosition,
+            bridge: bridge
+        )
+        
+        if popover.contentViewController == nil {
+            popover.contentViewController = NSHostingController(rootView: view)
+        } else if let hosting = popover.contentViewController as? NSHostingController<LyricsDropdownView> {
+            hosting.rootView = view
+        }
     }
     
     @objc private func showPreferences(_ sender: NSMenuItem) {
@@ -122,6 +180,15 @@ public final class MenuBarEngine: NSObject {
     }
     
     public func update(state: PlayerState, lyrics: [LyricLine], status: LyricsStatus, lastUpdated: Date) {
+        latestState = state
+        latestLyrics = lyrics
+        let currentPos = getCurrentPosition(state: state, lastUpdated: lastUpdated)
+        latestPosition = currentPos
+        
+        if popover.isShown {
+            updatePopoverContent()
+        }
+        
         let title: String
         var showOnlyIcon = false
         var needsScroll = false
@@ -133,8 +200,6 @@ public final class MenuBarEngine: NSObject {
             title = ""
             showOnlyIcon = true
         } else {
-            let currentPos = getCurrentPosition(state: state, lastUpdated: lastUpdated)
-            
             switch status {
             case .none, .loading:
                 if case let .playing(track, _) = state {
@@ -175,8 +240,9 @@ public final class MenuBarEngine: NSObject {
                         
                         let font = statusItem.button?.font ?? NSFont.systemFont(ofSize: 13.0)
                         
-                        // Use 250.0 instead of 350.0 to prevent the notch from hiding the item
-                        let scrollResult = getScrolledTitle(lyricText, maxWidth: 250.0, font: font, elapsed: elapsed, duration: lineDuration)
+                        // Use 250.0 instead of 350.0 to prevent the notch from hiding the item.
+                        // Pass 200.0 as maxWidth for the text calculation to leave room for the icon, padding, and leading spaces.
+                        let scrollResult = getScrolledTitle(lyricText, maxWidth: 200.0, font: font, elapsed: elapsed, duration: lineDuration)
                         title = scrollResult.title
                         needsScroll = scrollResult.needsScrolling
                     }
@@ -192,11 +258,8 @@ public final class MenuBarEngine: NSObject {
                 button.title = ""
                 button.image = getVinylIcon(isPlaying: state.isPlaying)
             } else {
-                if needsScroll {
-                    statusItem.length = 250.0
-                } else {
-                    statusItem.length = NSStatusItem.variableLength
-                }
+                // Always use fixed length to prevent layout shifts which jar the popover
+                statusItem.length = 250.0
                 
                 let textColorMode = UserDefaults.standard.string(forKey: "textColorMode") ?? "system"
                 if textColorMode == "subtle" {

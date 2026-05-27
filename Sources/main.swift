@@ -11,7 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         stateActor = AppStateActor()
         client = LyricsClient()
         bridge = MediaBridge()
-        menuEngine = MenuBarEngine()
+        menuEngine = MenuBarEngine(bridge: bridge)
         
         Task {
             await startPollingLoop()
@@ -51,34 +51,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                             
                             Task {
                                 var lyricsLines: [LyricLine]? = nil
+                                var fetchError: Error? = nil
                                 
-                                if track.player == "Music" {
-                                    if let nativeText = await bridge.fetchAppleMusicLyrics() {
-                                        print("Fetched native lyrics for \(track.title)")
-                                        lyricsLines = client.parseLyrics(nativeText)
-                                    } else {
-                                        print("No native lyrics found for \(track.title)")
-                                    }
+                                // 1. Try LRCLIB
+                                do {
+                                    print("Fetching lrclib lyrics for \(track.title)")
+                                    lyricsLines = try await client.fetchLyrics(
+                                        track: track.title,
+                                        artist: track.artist,
+                                        album: track.album,
+                                        duration: track.duration
+                                    )
+                                    print("Successfully fetched lrclib lyrics")
+                                } catch {
+                                    print("Failed to fetch lrclib lyrics: \(error)")
+                                    fetchError = error
                                 }
                                 
-                                if lyricsLines == nil {
-                                    do {
-                                        print("Fetching lrclib lyrics for \(track.title)")
-                                        lyricsLines = try await client.fetchLyrics(
-                                            track: track.title,
-                                            artist: track.artist,
-                                            album: track.album,
-                                            duration: track.duration
-                                        )
-                                        print("Successfully fetched lrclib lyrics")
-                                    } catch {
-                                        print("Failed to fetch lyrics: \(error)")
-                                        await stateActor.setLyricsError(error.localizedDescription, forKey: newTrackKey)
+                                // 2. Fallback to Apple Music Native Offline
+                                if lyricsLines == nil && track.player == "Music" {
+                                    if let nativeText = await bridge.fetchAppleMusicLyrics() {
+                                        print("Fallback: Fetched native lyrics for \(track.title)")
+                                        lyricsLines = client.parseLyrics(nativeText)
+                                    } else {
+                                        print("Fallback: No native lyrics found for \(track.title)")
                                     }
                                 }
                                 
                                 if let finalLyrics = lyricsLines {
                                     await stateActor.setLyricsLoaded(finalLyrics, forKey: newTrackKey)
+                                } else if let error = fetchError {
+                                    await stateActor.setLyricsError(error.localizedDescription, forKey: newTrackKey)
+                                } else {
+                                    await stateActor.setLyricsError("Lyrics not found", forKey: newTrackKey)
                                 }
                             }
                         }
