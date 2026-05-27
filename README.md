@@ -11,6 +11,7 @@ A native, lightweight macOS menu bar app that displays synchronized scrolling ly
 - 🎵 **Dual Player Support:** Seamlessly detects whether Apple Music or Spotify is playing.
 - 📜 **Native & LRCLIB Support:** Queries Apple Music natively for lyrics or falls back to `lrclib.net` to automatically fetch synchronized lyrics (`[mm:ss.xx]`).
 - ✨ **Smooth Marquee Scrolling:** Dynamically and smoothly scrolls long lyric lines within your menu bar without jittering or overflowing into the notch.
+- ⚙️ **Customizable Preferences:** Adjust the marquee scroll speed, tracking polling interval, and menu bar text appearance from a native SwiftUI settings window.
 - 🌓 **Adaptive Icon:** Uses a custom vinyl logo that dynamically adapts to macOS Light and Dark modes.
 - 🔋 **Efficient Polling:** Minimal CPU footprint utilizing native `NSAppleScript` bridging and AppKit `NSStatusItem`.
 

@@ -93,6 +93,14 @@ public final class MenuBarEngine: NSObject {
         
         menu.addItem(NSMenuItem.separator())
         
+        let prefsItem = NSMenuItem(
+            title: "Preferences...",
+            action: #selector(showPreferences(_:)),
+            keyEquivalent: ","
+        )
+        prefsItem.target = self
+        menu.addItem(prefsItem)
+        
         let quitItem = NSMenuItem(
             title: "Quit",
             action: #selector(NSApplication.terminate(_:)),
@@ -102,6 +110,10 @@ public final class MenuBarEngine: NSObject {
         menu.addItem(quitItem)
         
         statusItem.menu = menu
+    }
+    
+    @objc private func showPreferences(_ sender: NSMenuItem) {
+        SettingsWindowManager.shared.showWindow()
     }
     
     @objc private func toggleLyrics(_ sender: NSMenuItem) {
@@ -185,7 +197,22 @@ public final class MenuBarEngine: NSObject {
                 } else {
                     statusItem.length = NSStatusItem.variableLength
                 }
-                button.title = "  " + title
+                
+                let textColorMode = UserDefaults.standard.string(forKey: "textColorMode") ?? "system"
+                if textColorMode == "subtle" {
+                    let attrs: [NSAttributedString.Key: Any] = [
+                        .foregroundColor: NSColor.secondaryLabelColor,
+                        .font: button.font ?? NSFont.systemFont(ofSize: 13.0)
+                    ]
+                    button.attributedTitle = NSAttributedString(string: "  " + title, attributes: attrs)
+                } else {
+                    let attrs: [NSAttributedString.Key: Any] = [
+                        .foregroundColor: NSColor.labelColor,
+                        .font: button.font ?? NSFont.systemFont(ofSize: 13.0)
+                    ]
+                    button.attributedTitle = NSAttributedString(string: "  " + title, attributes: attrs)
+                }
+                
                 button.image = getVinylIcon(isPlaying: state.isPlaying)
             }
         }
@@ -198,7 +225,8 @@ public final class MenuBarEngine: NSObject {
         }
         
         let pauseRatio = 0.2
-        let scrollDuration = max(0.1, duration * (1.0 - pauseRatio))
+        let speedModifier = UserDefaults.standard.double(forKey: "scrollSpeedModifier") > 0 ? UserDefaults.standard.double(forKey: "scrollSpeedModifier") : 1.0
+        let scrollDuration = max(0.1, duration * (1.0 - pauseRatio)) / speedModifier
         let adjustedElapsed = max(0.0, elapsed - (duration * pauseRatio / 2.0))
         
         var progress = adjustedElapsed / scrollDuration

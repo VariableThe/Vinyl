@@ -6,7 +6,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var client: LyricsClient!
     private var bridge: MediaBridge!
     private var menuEngine: MenuBarEngine!
-    private let pollingInterval: Double = 2.0
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         stateActor = AppStateActor()
@@ -93,7 +92,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             
             do {
-                try await Task.sleep(nanoseconds: UInt64(pollingInterval * 1_000_000_000))
+                var currentInterval = UserDefaults.standard.double(forKey: "pollingInterval")
+                if currentInterval < 1.0 { currentInterval = 2.0 } // default if not set
+                try await Task.sleep(nanoseconds: UInt64(currentInterval * 1_000_000_000))
             } catch {
                 break
             }
