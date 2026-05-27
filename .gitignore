@@ -1,0 +1,17 @@
+# Xcode / Swift Package Manager
+.build/
+.swiftpm/
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Scratch folder used for reference
+scratch/
+
+# Built app bundle
+MenuBarLyrics.app/
