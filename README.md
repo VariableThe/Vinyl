@@ -14,9 +14,8 @@ A native, lightweight macOS menu bar app that displays synchronized scrolling ly
 You will need the Swift toolchain installed (comes with Xcode Command Line Tools).
 
 1. Clone the repository:
-   ```bash
    git clone https://github.com/VariableThe/Vinyl.git
-   cd menu-bar-lyrics
+   cd Vinyl
    ```
 
 2. Build and bundle the app using the provided `Makefile`:
