@@ -1,4 +1,4 @@
-# Menu Bar Lyrics
+# Vinyl
 
 A native, lightweight macOS menu bar app that displays synchronized scrolling lyrics for **Apple Music** and **Spotify**.
 

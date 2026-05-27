@@ -1,5 +1,5 @@
-APP_NAME = MenuBarLyrics
-BUNDLE_ID = com.aditya.MenuBarLyrics
+APP_NAME = Vinyl
+BUNDLE_ID = com.aditya.Vinyl
 BUILD_DIR = .build/release
 APP_DIR = $(APP_NAME).app
 MACOS_DIR = $(APP_DIR)/Contents/MacOS
