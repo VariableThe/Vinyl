@@ -16,8 +16,15 @@ A native, lightweight macOS menu bar app that displays synchronized scrolling ly
 
 ## Installation
 
-The easiest way to install Vinyl is to download the latest pre-built release.
+### Homebrew (Recommended)
+You can easily install Vinyl using Homebrew:
+```bash
+brew tap VariableThe/tap
+brew install --cask vinyl
+```
 
+### Manual Download
+Alternatively, you can download the latest pre-built release:
 1. Go to the [Releases](https://github.com/VariableThe/Vinyl/releases/latest) page.
 2. Download the `Vinyl.zip` file.
 3. Extract the ZIP file and drag `Vinyl.app` into your `Applications/` folder.
