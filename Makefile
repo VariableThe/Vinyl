@@ -15,12 +15,16 @@ build:
 app: build
 	@echo "Bundling $(APP_NAME).app..."
 	@mkdir -p $(MACOS_DIR)
+	@mkdir -p $(APP_DIR)/Contents/Resources
 	@cp $(BUILD_DIR)/$(APP_NAME) $(MACOS_DIR)/
+	@if [ -f AppIcon.icns ]; then cp AppIcon.icns $(APP_DIR)/Contents/Resources/; fi
 	
 	@echo '<?xml version="1.0" encoding="UTF-8"?>' > $(INFO_PLIST)
 	@echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> $(INFO_PLIST)
 	@echo '<plist version="1.0">' >> $(INFO_PLIST)
 	@echo '<dict>' >> $(INFO_PLIST)
+	@echo '    <key>CFBundleIconFile</key>' >> $(INFO_PLIST)
+	@echo '    <string>AppIcon</string>' >> $(INFO_PLIST)
 	@echo '    <key>CFBundleExecutable</key>' >> $(INFO_PLIST)
 	@echo '    <string>$(APP_NAME)</string>' >> $(INFO_PLIST)
 	@echo '    <key>CFBundleIdentifier</key>' >> $(INFO_PLIST)
