@@ -14,7 +14,18 @@ A native, lightweight macOS menu bar app that displays synchronized scrolling ly
 - 🌓 **Adaptive Icon:** Uses a custom vinyl logo that dynamically adapts to macOS Light and Dark modes.
 - 🔋 **Efficient Polling:** Minimal CPU footprint utilizing native `NSAppleScript` bridging and AppKit `NSStatusItem`.
 
-## Installation & Build
+## Installation
+
+The easiest way to install Vinyl is to download the latest pre-built release.
+
+1. Go to the [Releases](https://github.com/VariableThe/Vinyl/releases/latest) page.
+2. Download the `Vinyl.zip` file.
+3. Extract the ZIP file and drag `Vinyl.app` into your `Applications/` folder.
+4. Double-click to run!
+
+> **Note:** Upon first run, macOS will prompt you to grant `Vinyl` permission to control "System Events" and "Music"/"Spotify". Please click **Allow** so the app can fetch currently playing metadata.
+
+## Build from Source
 
 You will need the Swift toolchain installed (comes with Xcode Command Line Tools).
 
@@ -24,14 +35,12 @@ You will need the Swift toolchain installed (comes with Xcode Command Line Tools
    cd Vinyl
    ```
 
-3. Build and bundle the app using the provided `Makefile`:
+2. Build and bundle the app using the provided `Makefile`:
    ```bash
    make app
    ```
 
-4. The command will output a `Vinyl.app` folder. Simply drag this to your `Applications/` folder and double-click to run!
-
-> **Note:** Upon first run, macOS will prompt you to grant `Terminal`/`Vinyl` permission to control "System Events" and "Music"/"Spotify". Please click **Allow** so the app can fetch currently playing metadata.
+3. The command will output a `Vinyl.app` folder. Simply drag this to your `Applications/` folder and double-click to run!
 
 ## Development
 
