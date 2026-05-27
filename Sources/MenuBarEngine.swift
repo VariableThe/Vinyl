@@ -4,13 +4,15 @@ import AppKit
 public final class MenuBarEngine: NSObject {
     private var statusItem: NSStatusItem!
     private var areLyricsEnabled: Bool = true
+    private var baseLogoImage: NSImage?
+    private var logoRotationAngle: CGFloat = 0.0
     
     public override init() {
         super.init()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         
         if let button = statusItem.button {
-            button.image = getMusicIcon()
+            button.image = getVinylIcon(isPlaying: false)
             button.imagePosition = .imageLeft
             button.lineBreakMode = .byClipping
             button.alignment = .left
@@ -22,6 +24,38 @@ public final class MenuBarEngine: NSObject {
         let image = NSImage(systemSymbolName: "music.note", accessibilityDescription: "Music")
         image?.isTemplate = true
         return image
+    }
+    
+    private func getVinylIcon(isPlaying: Bool) -> NSImage? {
+        if baseLogoImage == nil {
+            if let url = Bundle.module.url(forResource: "Vinyl LOGO", withExtension: "png") ?? Bundle.main.url(forResource: "Vinyl LOGO", withExtension: "png") {
+                baseLogoImage = NSImage(contentsOf: url)
+                
+                // Resize to fit nicely in menu bar (18x18 is standard)
+                if let img = baseLogoImage {
+                    let size = NSSize(width: 18, height: 18)
+                    let resized = NSImage(size: size)
+                    resized.lockFocus()
+                    NSGraphicsContext.current?.imageInterpolation = .high
+                    img.draw(in: NSRect(origin: .zero, size: size), from: NSRect(origin: .zero, size: img.size), operation: .copy, fraction: 1.0)
+                    resized.unlockFocus()
+                    baseLogoImage = resized
+                }
+            }
+        }
+        
+        guard let img = baseLogoImage else {
+            return getMusicIcon()
+        }
+        
+        if isPlaying {
+            logoRotationAngle += 15.0 // 15 degrees per 100ms update
+            if logoRotationAngle >= 360 {
+                logoRotationAngle -= 360
+            }
+        }
+        
+        return img.rotated(by: logoRotationAngle)
     }
     
     private func setupMenu() {
@@ -123,7 +157,7 @@ public final class MenuBarEngine: NSObject {
             if showOnlyIcon || title.isEmpty {
                 statusItem.length = NSStatusItem.squareLength
                 button.title = ""
-                button.image = getMusicIcon()
+                button.image = getVinylIcon(isPlaying: state.isPlaying)
             } else {
                 if needsScroll {
                     statusItem.length = 250.0
@@ -131,7 +165,7 @@ public final class MenuBarEngine: NSObject {
                     statusItem.length = NSStatusItem.variableLength
                 }
                 button.title = title
-                button.image = getMusicIcon()
+                button.image = getVinylIcon(isPlaying: state.isPlaying)
             }
         }
     }
@@ -203,5 +237,27 @@ public final class MenuBarEngine: NSObject {
             }
         }
         return activeIndex
+    }
+}
+
+extension NSImage {
+    func rotated(by degrees: CGFloat) -> NSImage {
+        let imageSize = self.size
+        let image = NSImage(size: imageSize)
+        image.lockFocus()
+        
+        guard let context = NSGraphicsContext.current?.cgContext else {
+            image.unlockFocus()
+            return self
+        }
+        
+        context.translateBy(x: imageSize.width / 2, y: imageSize.height / 2)
+        context.rotate(by: -degrees * .pi / 180)
+        context.translateBy(x: -imageSize.width / 2, y: -imageSize.height / 2)
+        
+        self.draw(in: NSRect(origin: .zero, size: imageSize))
+        
+        image.unlockFocus()
+        return image
     }
 }

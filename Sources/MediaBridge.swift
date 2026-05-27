@@ -70,8 +70,6 @@ public struct MediaBridge: Sendable {
             return .notRunning
         }
         
-        // Duration in Spotify is milliseconds, Music is seconds
-        let durationConversion = appName == "Spotify" ? "(trackDuration / 1000.0)" : "trackDuration"
         
         let getPlaybackStateScript = """
         tell application "\(appName)"
@@ -101,10 +99,18 @@ public struct MediaBridge: Sendable {
                     set trackPosition to player position
                 end try
                 try
-                    set pState to player state as string
+                    if player state is playing then
+                        set pState to "playing"
+                    else if player state is paused then
+                        set pState to "paused"
+                    end if
                 end try
                 
-                return trackName & "||" & trackArtist & "||" & trackAlbum & "||" & (\(durationConversion) as string) & "||" & (trackPosition as string) & "||" & pState
+                if "\(appName)" is "Spotify" then
+                    set trackDuration to trackDuration / 1000.0
+                end if
+                
+                return trackName & "||" & trackArtist & "||" & trackAlbum & "||" & (trackDuration as string) & "||" & (trackPosition as string) & "||" & pState
             end if
         end tell
         """
