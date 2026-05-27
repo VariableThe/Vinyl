@@ -4,7 +4,8 @@ import AppKit
 public final class MenuBarEngine: NSObject {
     private var statusItem: NSStatusItem!
     private var areLyricsEnabled: Bool = true
-    private var baseLogoImage: NSImage?
+    private var baseLogoImageDark: NSImage?
+    private var baseLogoImageLight: NSImage?
     private var logoRotationAngle: CGFloat = 0.0
     
     public override init() {
@@ -27,24 +28,33 @@ public final class MenuBarEngine: NSObject {
     }
     
     private func getVinylIcon(isPlaying: Bool) -> NSImage? {
-        if baseLogoImage == nil {
-            if let url = Bundle.module.url(forResource: "Vinyl LOGO", withExtension: "png") ?? Bundle.main.url(forResource: "Vinyl LOGO", withExtension: "png") {
-                baseLogoImage = NSImage(contentsOf: url)
-                
-                // Resize to fit nicely in menu bar (18x18 is standard)
-                if let img = baseLogoImage {
-                    let size = NSSize(width: 18, height: 18)
-                    let resized = NSImage(size: size)
-                    resized.lockFocus()
-                    NSGraphicsContext.current?.imageInterpolation = .high
-                    img.draw(in: NSRect(origin: .zero, size: size), from: NSRect(origin: .zero, size: img.size), operation: .copy, fraction: 1.0)
-                    resized.unlockFocus()
-                    baseLogoImage = resized
-                }
-            }
+        let isDark: Bool
+        if #available(macOS 10.14, *) {
+            isDark = statusItem.button?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        } else {
+            isDark = false
         }
         
-        guard let img = baseLogoImage else {
+        let targetLogoName = isDark ? "Logo - white" : "Logo - black"
+        
+        var activeImage: NSImage?
+        if isDark {
+            if baseLogoImageDark == nil {
+                if let url = Bundle.module.url(forResource: targetLogoName, withExtension: "png") ?? Bundle.main.url(forResource: targetLogoName, withExtension: "png") {
+                    baseLogoImageDark = loadAndResizeImage(from: url)
+                }
+            }
+            activeImage = baseLogoImageDark
+        } else {
+            if baseLogoImageLight == nil {
+                if let url = Bundle.module.url(forResource: targetLogoName, withExtension: "png") ?? Bundle.main.url(forResource: targetLogoName, withExtension: "png") {
+                    baseLogoImageLight = loadAndResizeImage(from: url)
+                }
+            }
+            activeImage = baseLogoImageLight
+        }
+        
+        guard let img = activeImage else {
             return getMusicIcon()
         }
         
@@ -56,6 +66,17 @@ public final class MenuBarEngine: NSObject {
         }
         
         return img.rotated(by: logoRotationAngle)
+    }
+    
+    private func loadAndResizeImage(from url: URL) -> NSImage? {
+        guard let img = NSImage(contentsOf: url) else { return nil }
+        let size = NSSize(width: 18, height: 18)
+        let resized = NSImage(size: size)
+        resized.lockFocus()
+        NSGraphicsContext.current?.imageInterpolation = .high
+        img.draw(in: NSRect(origin: .zero, size: size), from: NSRect(origin: .zero, size: img.size), operation: .copy, fraction: 1.0)
+        resized.unlockFocus()
+        return resized
     }
     
     private func setupMenu() {
