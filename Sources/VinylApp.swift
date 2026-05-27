@@ -7,25 +7,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var bridge: MediaBridge!
     private var menuEngine: MenuBarEngine!
     
+    private var pollingTask: Task<Void, Never>?
+    private var updateTask: Task<Void, Never>?
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
         stateActor = AppStateActor()
         client = LyricsClient()
         bridge = MediaBridge()
         menuEngine = MenuBarEngine(bridge: bridge)
         
-        Task {
+        pollingTask = Task {
             await startPollingLoop()
         }
         
-        Task {
+        updateTask = Task {
             await startUpdateLoop()
         }
+    }
+    
+    func applicationWillTerminate(_ notification: Notification) {
+        pollingTask?.cancel()
+        updateTask?.cancel()
     }
     
     private func startPollingLoop() async {
         var currentTrackKey = ""
         
         while true {
+            guard !Task.isCancelled else { break }
             do {
                 let state = try await bridge.fetchCurrentState()
                 await stateActor.updatePlayback(state: state)
@@ -108,6 +117,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func startUpdateLoop() async {
         while true {
+            guard !Task.isCancelled else { break }
             let playbackInfo = await stateActor.getState()
             let lyricsInfo = await stateActor.getLyrics()
             
@@ -127,8 +137,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-let app = NSApplication.shared
-let delegate = AppDelegate()
-app.delegate = delegate
-app.setActivationPolicy(.accessory)
-app.run()
+@main
+struct VinylApp {
+    static func main() {
+        let app = NSApplication.shared
+        let delegate = AppDelegate()
+        app.delegate = delegate
+        app.setActivationPolicy(.accessory)
+        app.run()
+    }
+}

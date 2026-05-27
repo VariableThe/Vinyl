@@ -15,5 +15,8 @@ let package = Package(
             name: "Vinyl",
             path: "Sources",
             resources: [.process("Resources")]),
+        .testTarget(
+            name: "VinylTests",
+            dependencies: ["Vinyl"]),
     ]
 )

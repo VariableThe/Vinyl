@@ -28,10 +28,15 @@ public actor AppStateActor {
         }
     }
     
+    private var saveTask: Task<Void, Never>?
+
     private func saveCacheToDisk() {
         let cacheToSave = lyricsCache
         let url = cacheFileURL
-        Task {
+        saveTask?.cancel()
+        saveTask = Task {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard !Task.isCancelled else { return }
             if let data = try? JSONEncoder().encode(cacheToSave) {
                 try? data.write(to: url)
             }

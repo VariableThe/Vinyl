@@ -297,13 +297,14 @@ public final class MenuBarEngine: NSObject {
         if progress > 1 { progress = 1 }
         
         var maxStartIndex = 0
+        var currentIndex = text.startIndex
         for i in 0..<text.count {
-            let idx = text.index(text.startIndex, offsetBy: i)
-            let sub = String(text[idx...])
+            let sub = String(text[currentIndex...])
             if getStringWidth(sub, font: font) <= maxWidth {
                 maxStartIndex = i
                 break
             }
+            text.formIndex(after: &currentIndex)
         }
         
         let shift = Int(progress * Double(maxStartIndex))

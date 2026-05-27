@@ -7,7 +7,7 @@ public struct Track: Equatable, Sendable {
     public let duration: Double
     public let player: String // "Spotify" or "Music"
     
-    public var trackKey: String { "\(title)-\(artist)" }
+    public var trackKey: String { "\(title)-\(artist)-\(album)-\(Int(duration))" }
 }
 
 public enum PlayerState: Equatable, Sendable {
@@ -122,6 +122,10 @@ public struct MediaBridge: Sendable {
             return .notRunning
         }
         
+        return Self.parseState(from: stateStr, appName: appName)
+    }
+    
+    public static func parseState(from stateStr: String, appName: String) -> PlayerState {
         if stateStr == "stopped" {
             return .stopped
         }
