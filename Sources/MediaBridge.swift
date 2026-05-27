@@ -65,7 +65,7 @@ public struct MediaBridge: Sendable {
         end tell
         """
         
-        let isRunningStr = try await executeAppleScript(isRunningScript)
+        let isRunningStr = try executeAppleScript(isRunningScript)
         guard isRunningStr.trimmingCharacters(in: .whitespacesAndNewlines) == "true" else {
             return .notRunning
         }
@@ -117,7 +117,7 @@ public struct MediaBridge: Sendable {
         
         let stateStr: String
         do {
-            stateStr = try await executeAppleScript(getPlaybackStateScript).trimmingCharacters(in: .whitespacesAndNewlines)
+            stateStr = try executeAppleScript(getPlaybackStateScript).trimmingCharacters(in: .whitespacesAndNewlines)
         } catch {
             return .notRunning
         }
@@ -172,10 +172,30 @@ public struct MediaBridge: Sendable {
             end if
         end tell
         """
-        if let result = try? await executeAppleScript(script), !result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if let result = try? executeAppleScript(script), !result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return result.trimmingCharacters(in: .whitespacesAndNewlines)
         }
         return nil
+    }
+    
+    public func playPause(player: String) async {
+        let script = "tell application \"\(player)\" to playpause"
+        _ = try? executeAppleScript(script)
+    }
+    
+    public func skipToNextItem(player: String) async {
+        let script = "tell application \"\(player)\" to next track"
+        _ = try? executeAppleScript(script)
+    }
+    
+    public func skipToPreviousItem(player: String) async {
+        let script = "tell application \"\(player)\" to previous track"
+        _ = try? executeAppleScript(script)
+    }
+    
+    public func seekTo(position: Double, player: String) async {
+        let script = "tell application \"\(player)\" to set player position to \(position)"
+        _ = try? executeAppleScript(script)
     }
     
     private func executeAppleScript(_ source: String) throws -> String {

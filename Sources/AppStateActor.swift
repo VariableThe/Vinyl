@@ -8,8 +8,35 @@ public actor AppStateActor {
     
     // Cache for lyrics so we don't refetch on pause/play
     private var lyricsCache: [String: [LyricLine]] = [:]
+    private let cacheFileURL: URL
     
-    public init() {}
+    public init() {
+        let fileManager = FileManager.default
+        let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let appDirURL = appSupportURL.appendingPathComponent("Vinyl", isDirectory: true)
+        
+        if !fileManager.fileExists(atPath: appDirURL.path) {
+            try? fileManager.createDirectory(at: appDirURL, withIntermediateDirectories: true)
+        }
+        
+        let url = appDirURL.appendingPathComponent("lyrics_cache.json")
+        cacheFileURL = url
+        
+        if let data = try? Data(contentsOf: url),
+           let decoded = try? JSONDecoder().decode([String: [LyricLine]].self, from: data) {
+            lyricsCache = decoded
+        }
+    }
+    
+    private func saveCacheToDisk() {
+        let cacheToSave = lyricsCache
+        let url = cacheFileURL
+        Task {
+            if let data = try? JSONEncoder().encode(cacheToSave) {
+                try? data.write(to: url)
+            }
+        }
+    }
     
     public func updatePlayback(state newState: PlayerState) {
         self.state = newState
@@ -25,6 +52,7 @@ public actor AppStateActor {
         self.lyricsStatus = .loaded
         self.currentLyrics = lyrics
         self.lyricsCache[key] = lyrics
+        saveCacheToDisk()
     }
     
     public func setLyricsNotFound(forKey key: String) {
@@ -49,3 +77,4 @@ public actor AppStateActor {
         return (currentLyrics, lyricsStatus)
     }
 }
+

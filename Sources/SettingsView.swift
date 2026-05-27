@@ -4,6 +4,7 @@ public struct SettingsView: View {
     @AppStorage("scrollSpeedModifier") private var scrollSpeedModifier: Double = 1.0
     @AppStorage("pollingInterval") private var pollingInterval: Double = 2.0
     @AppStorage("textColorMode") private var textColorMode: String = "system"
+    @AppStorage("enableDropdownUI") private var enableDropdownUI: Bool = true
     
     public init() {}
     
@@ -37,9 +38,12 @@ public struct SettingsView: View {
                     .pickerStyle(.segmented)
                 }
                 .padding(.vertical, 8)
+                
+                Toggle("Enable Dropdown UI & Controls", isOn: $enableDropdownUI)
+                    .padding(.vertical, 8)
             }
         }
         .padding(20)
-        .frame(width: 350, height: 350)
+        .frame(width: 350, height: 400)
     }
 }

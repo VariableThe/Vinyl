@@ -1,6 +1,6 @@
 import Foundation
 
-public struct LyricLine: Sendable {
+public struct LyricLine: Sendable, Codable {
     public let timestamp: Double
     public let text: String
 }

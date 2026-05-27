@@ -9,11 +9,24 @@ A native, lightweight macOS menu bar app that displays synchronized scrolling ly
 
 ## Features
 - 🎵 **Dual Player Support:** Seamlessly detects whether Apple Music or Spotify is playing.
+- 🎛️ **Interactive Dropdown & Media Controls:** Left-click the menu bar to reveal a beautiful popover with full scrolling lyrics, a seek bar, and playback controls.
+- 💾 **Smart Local Caching:** Saves lyrics to a local JSON cache to completely eliminate API calls for songs you've played before.
+- 🛜 **Offline Mode:** Falls back to fetching native plain-text lyrics from Apple Music via AppleScript when the internet or `lrclib.net` is unavailable.
 - 📜 **Native & LRCLIB Support:** Queries Apple Music natively for lyrics or falls back to `lrclib.net` to automatically fetch synchronized lyrics (`[mm:ss.xx]`).
 - ✨ **Smooth Marquee Scrolling:** Dynamically and smoothly scrolls long lyric lines within your menu bar without jittering or overflowing into the notch.
-- ⚙️ **Customizable Preferences:** Adjust the marquee scroll speed, tracking polling interval, and menu bar text appearance from a native SwiftUI settings window.
+- ⚙️ **Customizable Preferences:** Adjust the marquee scroll speed, tracking polling interval, menu bar text appearance, and toggle the dropdown UI from a native SwiftUI settings window.
 - 🌓 **Adaptive Icon:** Uses a custom vinyl logo that dynamically adapts to macOS Light and Dark modes.
 - 🔋 **Efficient Polling:** Minimal CPU footprint utilizing native `NSAppleScript` bridging and AppKit `NSStatusItem`.
+
+## Screenshots
+
+<p align="center">
+  <img src="dropdown panel preview.png" alt="Dropdown Panel Preview" width="45%"/>
+  <img src="settings preview.png" alt="Settings Preview" width="45%"/>
+</p>
+<p align="center">
+  <img src="right click preview.png" alt="Right Click Preview" width="45%"/>
+</p>
 
 ## Installation
 
