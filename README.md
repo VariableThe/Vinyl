@@ -33,6 +33,15 @@ Alternatively, you can download the latest pre-built release:
 
 > **Note:** Upon first run, macOS will prompt you to grant `Vinyl` permission to control "System Events" and "Music"/"Spotify". Please click **Allow** so the app can fetch currently playing metadata.
 
+> ⚠️ **Note on macOS Gatekeeper ("App is damaged" error)**
+> Because Vinyl is an open-source utility and is not code-signed with a paid Apple Developer ID, macOS will apply a quarantine flag to the application upon manual download, throwing a false "damaged app" warning.
+>
+> To fix this, simply open your Terminal and run the following command to strip the quarantine flag:
+> ```bash
+> xattr -cr /Applications/Vinyl.app
+> ```
+> Once run, you can open Vinyl normally!
+
 ## Build from Source
 
 You will need the Swift toolchain installed (comes with Xcode Command Line Tools).
