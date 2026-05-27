@@ -15,7 +15,7 @@ You will need the Swift toolchain installed (comes with Xcode Command Line Tools
 
 1. Clone the repository:
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/VariableThe/Vinyl.git
    cd menu-bar-lyrics
    ```
 
