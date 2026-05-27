@@ -18,7 +18,54 @@ public struct LyricsClient: Sendable {
     
     public init() {}
     
+    private struct LRCLyrics: Decodable {
+        let syncedLyrics: String?
+        let plainLyrics: String?
+    }
+    
     public func fetchLyrics(
+        track: String,
+        artist: String,
+        album: String,
+        duration: Double
+    ) async throws -> [LyricLine] {
+        do {
+            return try await fetchExactMatch(track: track, artist: artist, album: album, duration: duration)
+        } catch URLError.fileDoesNotExist {
+            return try await fetchSearchMatch(track: track, artist: artist)
+        }
+    }
+    
+    private func fetchSearchMatch(track: String, artist: String) async throws -> [LyricLine] {
+        var components = URLComponents(string: "https://lrclib.net/api/search")!
+        components.queryItems = [
+            URLQueryItem(name: "q", value: "\(track) \(artist)")
+        ]
+        
+        guard let url = components.url else { throw URLError(.badURL) }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 8.0
+        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        
+        let decodedArray = try JSONDecoder().decode([LRCLyrics].self, from: data)
+        
+        for decoded in decodedArray {
+            if let synced = decoded.syncedLyrics, !synced.isEmpty {
+                return parseLyrics(synced)
+            } else if let plain = decoded.plainLyrics, !plain.isEmpty {
+                return parseLyrics(plain)
+            }
+        }
+        
+        throw URLError(.fileDoesNotExist)
+    }
+    
+    private func fetchExactMatch(
         track: String,
         artist: String,
         album: String,
@@ -58,11 +105,6 @@ public struct LyricsClient: Sendable {
         
         guard httpResponse.statusCode == 200 else {
             throw URLError(.badServerResponse)
-        }
-        
-        struct LRCLyrics: Decodable {
-            let syncedLyrics: String?
-            let plainLyrics: String?
         }
         
         let decoded = try JSONDecoder().decode(LRCLyrics.self, from: data)
