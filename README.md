@@ -78,6 +78,7 @@ To run the app directly from source in development mode:
 ```bash
 swift run
 ```
+Interested in how Vinyl stacks up against choices like LyricsX, LyricFever, or LyricGlow? Check out the [Ecosystem Comparisons](comparisons.md) guide.
 
 ## Credits
 Concept inspired by [LYRA](https://github.com/Dai-Ski/LYRA) and [boring.notch](https://github.com/TheBoredTeam/boring.notch).
