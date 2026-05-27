@@ -164,7 +164,7 @@ public final class MenuBarEngine: NSObject {
                 } else {
                     statusItem.length = NSStatusItem.variableLength
                 }
-                button.title = title
+                button.title = "  " + title
                 button.image = getVinylIcon(isPlaying: state.isPlaying)
             }
         }
