@@ -1,6 +1,11 @@
 # Vinyl
 
+<div align="center">
+  <img src="preview.png" alt="Vinyl Preview" width="600"/>
+</div>
+
 A native, lightweight macOS menu bar app that displays synchronized scrolling lyrics for **Apple Music** and **Spotify**.
+
 
 ## Features
 - 🎵 **Dual Player Support:** Seamlessly detects whether Apple Music or Spotify is playing.
