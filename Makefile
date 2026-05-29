@@ -4,6 +4,11 @@ BUILD_DIR = .build/release
 APP_DIR = $(APP_NAME).app
 MACOS_DIR = $(APP_DIR)/Contents/MacOS
 INFO_PLIST = $(APP_DIR)/Contents/Info.plist
+VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')
+ifeq ($(strip $(VERSION)),)
+VERSION = 1.0
+endif
+SIGN_IDENTITY ?= -
 
 .PHONY: all build app clean run
 
@@ -35,13 +40,14 @@ app: build
 	@echo '    <key>CFBundlePackageType</key>' >> $(INFO_PLIST)
 	@echo '    <string>APPL</string>' >> $(INFO_PLIST)
 	@echo '    <key>CFBundleShortVersionString</key>' >> $(INFO_PLIST)
-	@echo '    <string>1.0</string>' >> $(INFO_PLIST)
+	@echo '    <string>$(VERSION)</string>' >> $(INFO_PLIST)
 	@echo '    <key>LSUIElement</key>' >> $(INFO_PLIST)
 	@echo '    <true/>' >> $(INFO_PLIST)
 	@echo '    <key>NSAppleEventsUsageDescription</key>' >> $(INFO_PLIST)
 	@echo '    <string>$(APP_NAME) requires AppleScript to read currently playing track details from Apple Music and Spotify.</string>' >> $(INFO_PLIST)
 	@echo '</dict>' >> $(INFO_PLIST)
 	@echo '</plist>' >> $(INFO_PLIST)
+	@codesign --force --deep --sign "$(SIGN_IDENTITY)" $(APP_DIR)
 	
 	@echo "$(APP_NAME).app successfully built."
 
