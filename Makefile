@@ -17,6 +17,7 @@ app: build
 	@mkdir -p $(MACOS_DIR)
 	@mkdir -p $(APP_DIR)/Contents/Resources
 	@cp $(BUILD_DIR)/$(APP_NAME) $(MACOS_DIR)/
+	@if [ -d $(BUILD_DIR)/Vinyl_Vinyl.bundle ]; then cp -R $(BUILD_DIR)/Vinyl_Vinyl.bundle $(APP_DIR)/Contents/Resources/; fi
 	@if [ -f AppIcon.icns ]; then cp AppIcon.icns $(APP_DIR)/Contents/Resources/; fi
 	
 	@echo '<?xml version="1.0" encoding="UTF-8"?>' > $(INFO_PLIST)

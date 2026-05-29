@@ -50,17 +50,33 @@ public final class MenuBarEngine: NSObject {
         
         let targetLogoName = isDark ? "Logo - white" : "Logo - black"
         
+        let safeModule: Bundle = {
+            let bundleName = "Vinyl_Vinyl"
+            let candidates = [
+                Bundle.main.resourceURL?.appendingPathComponent("\(bundleName).bundle"),
+                Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/\(bundleName).bundle"),
+                Bundle.main.bundleURL.appendingPathComponent("\(bundleName).bundle")
+            ].compactMap { $0 }
+            
+            for url in candidates {
+                if let bundle = Bundle(url: url) {
+                    return bundle
+                }
+            }
+            return Bundle.main
+        }()
+        
         var activeImage: NSImage?
         if isDark {
             if baseLogoImageDark == nil {
-                if let url = Bundle.module.url(forResource: targetLogoName, withExtension: "png") ?? Bundle.main.url(forResource: targetLogoName, withExtension: "png") {
+                if let url = safeModule.url(forResource: targetLogoName, withExtension: "png") ?? Bundle.main.url(forResource: targetLogoName, withExtension: "png") {
                     baseLogoImageDark = loadAndResizeImage(from: url)
                 }
             }
             activeImage = baseLogoImageDark
         } else {
             if baseLogoImageLight == nil {
-                if let url = Bundle.module.url(forResource: targetLogoName, withExtension: "png") ?? Bundle.main.url(forResource: targetLogoName, withExtension: "png") {
+                if let url = safeModule.url(forResource: targetLogoName, withExtension: "png") ?? Bundle.main.url(forResource: targetLogoName, withExtension: "png") {
                     baseLogoImageLight = loadAndResizeImage(from: url)
                 }
             }
