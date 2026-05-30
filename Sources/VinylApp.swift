@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     
     private var pollingTask: Task<Void, Never>?
     private var updateTask: Task<Void, Never>?
+    private var artworkTask: Task<Void, Never>?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         stateActor = AppStateActor()
@@ -53,8 +54,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         currentTrackKey = newTrackKey
                         print("Now playing: \(track.title) by \(track.artist)")
                         
-                        Task {
+                        artworkTask?.cancel()
+                        artworkTask = Task {
                             let artworkData = await bridge.fetchArtwork(for: track.player)
+                            guard !Task.isCancelled else { return }
                             await stateActor.setArtwork(artworkData)
                         }
                         

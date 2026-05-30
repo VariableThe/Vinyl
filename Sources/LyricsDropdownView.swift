@@ -44,6 +44,7 @@ public struct LyricsDropdownView: View {
                         .resizable()
                         .scaledToFill()
                         .frame(width: 40, height: 40)
+                        .clipped()
                         .cornerRadius(4)
                 }
                 VStack(alignment: .leading) {
@@ -228,6 +229,7 @@ public struct LyricsDropdownView: View {
                     Image(nsImage: artwork)
                         .resizable()
                         .scaledToFill()
+                        .clipped()
                         .blur(radius: 20)
                         .opacity(0.4)
                 } else {
@@ -236,6 +238,10 @@ public struct LyricsDropdownView: View {
             }
         )
         .frame(width: 380, height: 400)
+        .onChange(of: currentTrack?.trackKey) { _ in
+            optimisticShuffleState = nil
+            optimisticRepeatState = nil
+        }
     }
     
     private func isActiveLine(index: Int) -> Bool {
