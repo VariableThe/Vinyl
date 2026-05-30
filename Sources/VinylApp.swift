@@ -53,6 +53,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         currentTrackKey = newTrackKey
                         print("Now playing: \(track.title) by \(track.artist)")
                         
+                        Task {
+                            let artworkData = await bridge.fetchArtwork(for: track.player)
+                            await stateActor.setArtwork(artworkData)
+                        }
+                        
                         if let cached = await stateActor.getCachedLyrics(forKey: newTrackKey) {
                             await stateActor.setLyricsLoaded(cached, forKey: newTrackKey)
                         } else {
@@ -120,11 +125,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard !Task.isCancelled else { break }
             let playbackInfo = await stateActor.getState()
             let lyricsInfo = await stateActor.getLyrics()
+            let artworkData = await stateActor.getArtwork()
+            
+            let artworkImage = artworkData != nil ? NSImage(data: artworkData!) : nil
             
             menuEngine.update(
                 state: playbackInfo.state,
                 lyrics: lyricsInfo.lyrics,
                 status: lyricsInfo.status,
+                artwork: artworkImage,
                 lastUpdated: playbackInfo.lastUpdated
             )
             

@@ -6,17 +6,23 @@ public struct LyricsDropdownView: View {
     public let lyrics: [LyricLine]
     public let currentPosition: Double
     public let bridge: MediaBridge
+    public let artwork: NSImage?
     
-    public init(currentTrack: Track?, isPlaying: Bool, lyrics: [LyricLine], currentPosition: Double, bridge: MediaBridge) {
+    public init(currentTrack: Track?, isPlaying: Bool, lyrics: [LyricLine], currentPosition: Double, bridge: MediaBridge, artwork: NSImage?) {
         self.currentTrack = currentTrack
         self.isPlaying = isPlaying
         self.lyrics = lyrics
         self.currentPosition = currentPosition
         self.bridge = bridge
+        self.artwork = artwork
     }
     
+    @AppStorage("enableBlurredBackground") private var enableBlurredBackground: Bool = true
+    @AppStorage("enableHeaderAlbumArt") private var enableHeaderAlbumArt: Bool = false
     @State private var isDragging: Bool = false
     @State private var localPosition: Double = 0.0
+    @State private var optimisticShuffleState: Bool? = nil
+    @State private var optimisticRepeatState: Bool? = nil
     
     private var seekBinding: Binding<Double> {
         Binding<Double>(
@@ -33,6 +39,13 @@ public struct LyricsDropdownView: View {
         VStack(spacing: 0) {
             // Header
             HStack {
+                if enableHeaderAlbumArt, let artwork = artwork {
+                    Image(nsImage: artwork)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 40, height: 40)
+                        .cornerRadius(4)
+                }
                 VStack(alignment: .leading) {
                     Text(currentTrack?.title ?? "Not Playing")
                         .font(.headline)
@@ -45,13 +58,46 @@ public struct LyricsDropdownView: View {
                 Spacer()
                 
                 // Controls
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
+                    Button(action: {
+                        if let player = currentTrack?.player {
+                            let currentState = currentTrack?.isShuffleOn ?? false
+                            optimisticShuffleState = !currentState
+                            Task {
+                                await bridge.toggleShuffle(player: player)
+                                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                                optimisticShuffleState = nil
+                            }
+                        }
+                    }) {
+                        let isOn = optimisticShuffleState ?? (currentTrack?.isShuffleOn ?? false)
+                        Image(systemName: "shuffle")
+                            .font(.system(size: 12))
+                            .foregroundColor(isOn ? .accentColor : .primary)
+                            .frame(width: 26, height: 26)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+
+                    Button(action: {
+                        if let player = currentTrack?.player {
+                            Task { await bridge.skipBackward(seconds: 10, player: player) }
+                        }
+                    }) {
+                        Image(systemName: "gobackward.10")
+                            .frame(width: 26, height: 26)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
                     Button(action: {
                         if let player = currentTrack?.player {
                             Task { await bridge.skipToPreviousItem(player: player) }
                         }
                     }) {
                         Image(systemName: "backward.fill")
+                            .frame(width: 26, height: 26)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
                     
@@ -62,6 +108,8 @@ public struct LyricsDropdownView: View {
                     }) {
                         Image(systemName: isPlaying ? "pause.fill" : "play.fill")
                             .font(.title2)
+                            .frame(width: 32, height: 32)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
                     
@@ -71,6 +119,39 @@ public struct LyricsDropdownView: View {
                         }
                     }) {
                         Image(systemName: "forward.fill")
+                            .frame(width: 26, height: 26)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+
+                    Button(action: {
+                        if let player = currentTrack?.player {
+                            Task { await bridge.skipForward(seconds: 10, player: player) }
+                        }
+                    }) {
+                        Image(systemName: "goforward.10")
+                            .frame(width: 26, height: 26)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    Button(action: {
+                        if let player = currentTrack?.player {
+                            let currentState = currentTrack?.isRepeatOn ?? false
+                            optimisticRepeatState = !currentState
+                            Task {
+                                await bridge.toggleRepeat(player: player)
+                                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                                optimisticRepeatState = nil
+                            }
+                        }
+                    }) {
+                        let isOn = optimisticRepeatState ?? (currentTrack?.isRepeatOn ?? false)
+                        Image(systemName: "repeat")
+                            .font(.system(size: 12))
+                            .foregroundColor(isOn ? .accentColor : .primary)
+                            .frame(width: 26, height: 26)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
@@ -141,7 +222,20 @@ public struct LyricsDropdownView: View {
                 }
             }
         }
-        .frame(width: 300, height: 400)
+        .background(
+            Group {
+                if enableBlurredBackground, let artwork = artwork {
+                    Image(nsImage: artwork)
+                        .resizable()
+                        .scaledToFill()
+                        .blur(radius: 20)
+                        .opacity(0.4)
+                } else {
+                    Color.clear
+                }
+            }
+        )
+        .frame(width: 380, height: 400)
     }
     
     private func isActiveLine(index: Int) -> Bool {
