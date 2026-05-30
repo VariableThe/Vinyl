@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -14,9 +14,17 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Required for the tag action to see history
     
+    - name: Bump version and push tag
+      id: tag_version
+      uses: mathieudutour/github-tag-action@v6.2
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        
     - name: Build App
-      run: make app
+      run: make app VERSION=${{ steps.tag_version.outputs.new_version }}
       
     - name: Zip App
       run: zip -r Vinyl.zip Vinyl.app
@@ -24,6 +32,7 @@ jobs:
     - name: Create Release
       uses: softprops/action-gh-release@v3
       with:
+        tag_name: ${{ steps.tag_version.outputs.new_tag }}
         files: Vinyl.zip
 
     - name: Update Homebrew tap
@@ -31,6 +40,6 @@ jobs:
       with:
         formula-name: vinyl
         homebrew-tap: VariableThe/homebrew-tap
-        download-url: https://github.com/VariableThe/Vinyl/releases/download/${{ github.ref_name }}/Vinyl.zip
+        download-url: https://github.com/VariableThe/Vinyl/releases/download/${{ steps.tag_version.outputs.new_tag }}/Vinyl.zip
       env:
         COMMITTER_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
