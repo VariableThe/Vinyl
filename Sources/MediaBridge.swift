@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 
 public struct Track: Equatable, Sendable {
     public let title: String
@@ -6,8 +7,20 @@ public struct Track: Equatable, Sendable {
     public let album: String
     public let duration: Double
     public let player: String // "Spotify" or "Music"
+    public let isShuffleOn: Bool
+    public let isRepeatOn: Bool
     
     public var trackKey: String { "\(title)-\(artist)-\(album)-\(Int(duration))" }
+    
+    public init(title: String, artist: String, album: String, duration: Double, player: String, isShuffleOn: Bool = false, isRepeatOn: Bool = false) {
+        self.title = title
+        self.artist = artist
+        self.album = album
+        self.duration = duration
+        self.player = player
+        self.isShuffleOn = isShuffleOn
+        self.isRepeatOn = isRepeatOn
+    }
 }
 
 public enum PlayerState: Equatable, Sendable {
@@ -106,11 +119,25 @@ public struct MediaBridge: Sendable {
                     end if
                 end try
                 
+                set trackShuffle to false
+                set trackRepeat to false
+                try
+                    if "\(appName)" is "Music" then
+                        set trackShuffle to shuffle enabled
+                        if song repeat is not off then
+                            set trackRepeat to true
+                        end if
+                    else if "\(appName)" is "Spotify" then
+                        set trackShuffle to shuffling
+                        set trackRepeat to repeating
+                    end if
+                end try
+                
                 if "\(appName)" is "Spotify" then
                     set trackDuration to trackDuration / 1000.0
                 end if
                 
-                return trackName & "||" & trackArtist & "||" & trackAlbum & "||" & (trackDuration as string) & "||" & (trackPosition as string) & "||" & pState
+                return trackName & "||" & trackArtist & "||" & trackAlbum & "||" & (trackDuration as string) & "||" & (trackPosition as string) & "||" & pState & "||" & (trackShuffle as string) & "||" & (trackRepeat as string)
             end if
         end tell
         """
@@ -131,7 +158,7 @@ public struct MediaBridge: Sendable {
         }
         
         let parts = stateStr.components(separatedBy: "||")
-        guard parts.count == 6 else { return .stopped }
+        guard parts.count >= 6 else { return .stopped }
         
         let title = parts[0]
         let artist = parts[1]
@@ -144,7 +171,10 @@ public struct MediaBridge: Sendable {
         
         let pState = parts[5]
         
-        let track = Track(title: title, artist: artist, album: album, duration: durationSec, player: appName)
+        let isShuffleOn = parts.count > 6 ? (parts[6] == "true") : false
+        let isRepeatOn = parts.count > 7 ? (parts[7] == "true") : false
+        
+        let track = Track(title: title, artist: artist, album: album, duration: durationSec, player: appName, isShuffleOn: isShuffleOn, isRepeatOn: isRepeatOn)
         
         if pState == "playing" {
             return .playing(track: track, position: positionSec)
@@ -200,6 +230,116 @@ public struct MediaBridge: Sendable {
     public func seekTo(position: Double, player: String) async {
         let script = "tell application \"\(player)\" to set player position to \(position)"
         _ = try? executeAppleScript(script)
+    }
+    
+    public func skipForward(seconds: Double, player: String) async {
+        let script = """
+        tell application "\(player)"
+            try
+                set player position to (player position + \(seconds))
+            end try
+        end tell
+        """
+        _ = try? executeAppleScript(script)
+    }
+
+    public func skipBackward(seconds: Double, player: String) async {
+        let script = """
+        tell application "\(player)"
+            try
+                set currentPos to player position
+                if currentPos < \(seconds) then
+                    set player position to 0
+                else
+                    set player position to (currentPos - \(seconds))
+                end if
+            end try
+        end tell
+        """
+        _ = try? executeAppleScript(script)
+    }
+
+    public func toggleRepeat(player: String) async {
+        let script = """
+        tell application "\(player)"
+            if "\(player)" is "Music" then
+                try
+                    if song repeat is all then
+                        set song repeat to off
+                    else
+                        set song repeat to all
+                    end if
+                end try
+            else if "\(player)" is "Spotify" then
+                try
+                    set repeating to not repeating
+                end try
+            end if
+        end tell
+        """
+        _ = try? executeAppleScript(script)
+    }
+
+    public func toggleShuffle(player: String) async {
+        let script = """
+        tell application "\(player)"
+            if "\(player)" is "Music" then
+                try
+                    set shuffle enabled to not shuffle enabled
+                end try
+            else if "\(player)" is "Spotify" then
+                try
+                    set shuffling to not shuffling
+                end try
+            end if
+        end tell
+        """
+        _ = try? executeAppleScript(script)
+    }
+    
+    public func fetchArtwork(for player: String) async -> Data? {
+        if player == "Music" {
+            let scriptStr = """
+            tell application "Music"
+                try
+                    if player state is playing or player state is paused then
+                        return raw data of artwork 1 of current track
+                    end if
+                end try
+            end tell
+            """
+            if let script = NSAppleScript(source: scriptStr) {
+                var error: NSDictionary?
+                let desc = script.executeAndReturnError(&error)
+                let data = desc.data
+                if data.count > 0 {
+                    return data
+                }
+            }
+        } else if player == "Spotify" {
+            let scriptStr = """
+            tell application "Spotify"
+                try
+                    if player state is playing or player state is paused then
+                        return artwork url of current track
+                    end if
+                end try
+            end tell
+            """
+            if let script = NSAppleScript(source: scriptStr) {
+                var error: NSDictionary?
+                let desc = script.executeAndReturnError(&error)
+                if let urlString = desc.stringValue, let url = URL(string: urlString) {
+                    do {
+                        let (data, _) = try await URLSession.shared.data(from: url)
+                        return data
+                    } catch {
+                        return nil
+                    }
+                }
+            }
+        }
+        return nil
     }
     
     private func executeAppleScript(_ source: String) throws -> String {

@@ -16,6 +16,7 @@ public final class MenuBarEngine: NSObject {
     private var latestState: PlayerState = .notRunning
     private var latestLyrics: [LyricLine] = []
     private var latestPosition: Double = 0
+    private var latestArtwork: NSImage? = nil
     
     public init(bridge: MediaBridge) {
         self.bridge = bridge
@@ -154,7 +155,8 @@ public final class MenuBarEngine: NSObject {
                 popover.performClose(sender)
             } else {
                 updatePopoverContent()
-                popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
+                let anchorRect = NSRect(x: sender.bounds.width - 1, y: 0, width: 1, height: sender.bounds.height)
+                popover.show(relativeTo: anchorRect, of: sender, preferredEdge: .minY)
                 popover.contentViewController?.view.window?.makeKey()
             }
         }
@@ -176,7 +178,8 @@ public final class MenuBarEngine: NSObject {
             isPlaying: isPlaying,
             lyrics: latestLyrics,
             currentPosition: latestPosition,
-            bridge: bridge
+            bridge: bridge,
+            artwork: latestArtwork
         )
         
         if popover.contentViewController == nil {
@@ -195,9 +198,10 @@ public final class MenuBarEngine: NSObject {
         sender.state = areLyricsEnabled ? .on : .off
     }
     
-    public func update(state: PlayerState, lyrics: [LyricLine], status: LyricsStatus, lastUpdated: Date) {
+    public func update(state: PlayerState, lyrics: [LyricLine], status: LyricsStatus, artwork: NSImage?, lastUpdated: Date) {
         latestState = state
         latestLyrics = lyrics
+        latestArtwork = artwork
         let currentPos = getCurrentPosition(state: state, lastUpdated: lastUpdated)
         latestPosition = currentPos
         
@@ -274,25 +278,33 @@ public final class MenuBarEngine: NSObject {
                 button.title = ""
                 button.image = getVinylIcon(isPlaying: state.isPlaying)
             } else {
-                // Always use fixed length to prevent layout shifts which jar the popover
                 statusItem.length = 250.0
                 
+                let displayTitle = "  " + title
                 let textColorMode = UserDefaults.standard.string(forKey: "textColorMode") ?? "system"
                 if textColorMode == "subtle" {
                     let attrs: [NSAttributedString.Key: Any] = [
                         .foregroundColor: NSColor.secondaryLabelColor,
                         .font: button.font ?? NSFont.systemFont(ofSize: 13.0)
                     ]
-                    button.attributedTitle = NSAttributedString(string: "  " + title, attributes: attrs)
+                    button.attributedTitle = NSAttributedString(string: displayTitle, attributes: attrs)
                 } else {
                     let attrs: [NSAttributedString.Key: Any] = [
                         .foregroundColor: NSColor.labelColor,
                         .font: button.font ?? NSFont.systemFont(ofSize: 13.0)
                     ]
-                    button.attributedTitle = NSAttributedString(string: "  " + title, attributes: attrs)
+                    button.attributedTitle = NSAttributedString(string: displayTitle, attributes: attrs)
                 }
                 
                 button.image = getVinylIcon(isPlaying: state.isPlaying)
+            }
+            
+            if popover.isShown {
+                DispatchQueue.main.async {
+                    if let btn = self.statusItem.button {
+                        self.popover.positioningRect = NSRect(x: btn.bounds.width - 1, y: 0, width: 1, height: btn.bounds.height)
+                    }
+                }
             }
         }
     }
@@ -305,7 +317,19 @@ public final class MenuBarEngine: NSObject {
         
         let pauseRatio = 0.2
         let speedModifier = UserDefaults.standard.double(forKey: "scrollSpeedModifier") > 0 ? UserDefaults.standard.double(forKey: "scrollSpeedModifier") : 1.0
-        let scrollDuration = max(0.1, duration * (1.0 - pauseRatio)) / speedModifier
+        
+        let smartScroll = UserDefaults.standard.object(forKey: "smartScrollEnabled") == nil ? false : UserDefaults.standard.bool(forKey: "smartScrollEnabled")
+        
+        let scrollDuration: Double
+        if smartScroll {
+            let minDuration = Double(fullWidth) / 80.0
+            let maxDuration = Double(fullWidth) / 20.0
+            let idealDuration = duration * (1.0 - pauseRatio)
+            scrollDuration = min(maxDuration, max(minDuration, idealDuration)) / speedModifier
+        } else {
+            scrollDuration = max(0.1, duration * (1.0 - pauseRatio)) / speedModifier
+        }
+        
         let adjustedElapsed = max(0.0, elapsed - (duration * pauseRatio / 2.0))
         
         var progress = adjustedElapsed / scrollDuration

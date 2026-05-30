@@ -1,10 +1,14 @@
 import SwiftUI
-
+import ServiceManagement
 public struct SettingsView: View {
     @AppStorage("scrollSpeedModifier") private var scrollSpeedModifier: Double = 1.0
     @AppStorage("pollingInterval") private var pollingInterval: Double = 2.0
     @AppStorage("textColorMode") private var textColorMode: String = "system"
     @AppStorage("enableDropdownUI") private var enableDropdownUI: Bool = true
+    @AppStorage("smartScrollEnabled") private var smartScrollEnabled: Bool = false
+    @AppStorage("enableBlurredBackground") private var enableBlurredBackground: Bool = true
+    @AppStorage("enableHeaderAlbumArt") private var enableHeaderAlbumArt: Bool = false
+    @State private var launchAtLogin: Bool = SMAppService.mainApp.status == .enabled
     
     public init() {}
     
@@ -40,10 +44,29 @@ public struct SettingsView: View {
                 .padding(.vertical, 8)
                 
                 Toggle("Enable Dropdown UI & Controls", isOn: $enableDropdownUI)
-                    .padding(.vertical, 8)
+                
+                Toggle("Smart Scroll (Beta)", isOn: $smartScrollEnabled)
+                    
+                Toggle("Show Blurred Background", isOn: $enableBlurredBackground)
+                    
+                Toggle("Show Album Art in Header", isOn: $enableHeaderAlbumArt)
+                
+                Toggle("Launch at Login", isOn: $launchAtLogin)
+                    .onChange(of: launchAtLogin) { newValue in
+                        do {
+                            if newValue {
+                                try SMAppService.mainApp.register()
+                            } else {
+                                try SMAppService.mainApp.unregister()
+                            }
+                        } catch {
+                            print("Failed to update launch at login: \(error)")
+                            launchAtLogin = !newValue
+                        }
+                    }
             }
         }
         .padding(20)
-        .frame(width: 350, height: 400)
+        .frame(width: 380, height: 480)
     }
 }

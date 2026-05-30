@@ -1,10 +1,12 @@
 import Foundation
+import AppKit
 
 public actor AppStateActor {
     private var state: PlayerState = .notRunning
     private var lastUpdated: Date = Date()
     private var currentLyrics: [LyricLine] = []
     private var lyricsStatus: LyricsStatus = .none
+    private var currentArtwork: Data? = nil
     
     // Cache for lyrics so we don't refetch on pause/play
     private var lyricsCache: [String: [LyricLine]] = [:]
@@ -80,6 +82,14 @@ public actor AppStateActor {
     
     public func getLyrics() -> (lyrics: [LyricLine], status: LyricsStatus) {
         return (currentLyrics, lyricsStatus)
+    }
+    
+    public func setArtwork(_ data: Data?) {
+        self.currentArtwork = data
+    }
+    
+    public func getArtwork() -> Data? {
+        return currentArtwork
     }
 }
 
