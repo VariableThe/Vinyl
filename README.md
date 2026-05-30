@@ -1,7 +1,7 @@
 # Vinyl
 
 <div align="center">
-  <img src="preview.png" alt="Vinyl Preview" width="600"/>
+  <img src="Normal use-preview.png" alt="Vinyl Normal Use Preview" width="600"/>
 </div>
 
 A native, lightweight macOS menu bar app that displays synchronized scrolling lyrics for **Apple Music** and **Spotify**.
@@ -21,11 +21,11 @@ A native, lightweight macOS menu bar app that displays synchronized scrolling ly
 ## Screenshots
 
 <p align="center">
-  <img src="dropdown panel preview.png" alt="Dropdown Panel Preview" width="45%"/>
-  <img src="settings preview.png" alt="Settings Preview" width="45%"/>
+  <img src="Left click-preview.png" alt="Left Click Preview" width="45%"/>
+  <img src="Preferences -preview.png" alt="Preferences Preview" width="45%"/>
 </p>
 <p align="center">
-  <img src="right click preview.png" alt="Right Click Preview" width="45%"/>
+  <img src="Right click-preview.png" alt="Right Click Preview" width="45%"/>
 </p>
 
 ## Installation
