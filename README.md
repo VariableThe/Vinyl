@@ -14,9 +14,9 @@ A native, lightweight macOS menu bar app that displays synchronized scrolling ly
 - 🛜 **Offline Mode:** Falls back to fetching native plain-text lyrics from Apple Music via AppleScript when the internet or `lrclib.net` is unavailable.
 - 📜 **Native & LRCLIB Support:** Queries Apple Music natively for lyrics or falls back to `lrclib.net` to automatically fetch synchronized lyrics (`[mm:ss.xx]`). *(Note: Spotify removed its lyrics API, so Vinyl relies exclusively on `lrclib.net` for fetching Spotify lyrics.)*
 - ✨ **Smooth Marquee Scrolling:** Dynamically and smoothly scrolls long lyric lines within your menu bar without jittering or overflowing into the notch.
-- ⚙️ **Customizable Preferences:** Adjust the marquee scroll speed, tracking polling interval, menu bar text appearance, and toggle the dropdown UI from a native SwiftUI settings window.
+- ⚙️ **Customizable Preferences:** Adjust the marquee scroll speed, menu bar text appearance, and toggle the dropdown UI from a native SwiftUI settings window.
 - 🌓 **Adaptive Icon:** Uses a custom vinyl logo that dynamically adapts to macOS Light and Dark modes.
-- 🔋 **Efficient Polling:** Minimal CPU footprint utilizing native `NSAppleScript` bridging and AppKit `NSStatusItem`.
+- ⚡ **Instant Sync:** Uses macOS system notifications (`DistributedNotificationCenter`) for zero-delay, event-driven updates when tracks change, eliminating CPU-heavy interval polling.
 
 ## Screenshots
 
