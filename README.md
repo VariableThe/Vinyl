@@ -84,9 +84,9 @@ Interested in how Vinyl stacks up against choices like LyricsX, LyricFever, or L
 
 Vinyl is designed to be a fully interactive macOS application that can instantly strip down into a ghost process. 
 
-- **Absolute Stealth Mode:** Prefer the terminal-daemon aesthetic? You can toggle off the lyrics and UI entirely in the preferences. Vinyl can run as nothing more than a minimalist, spinning record icon in your menu bar when music plays. 
 - **Event-Driven Efficiency:** Vinyl doesn't waste CPU cycles constantly polling for track updates. It uses macOS native event notifications to sync instantly only when a track changes.
 - **Smart Caching:** Your bandwidth matters. Lyrics are cached in a local JSON file, meaning if you loop a song 100 times, Vinyl only fetches the data once.
+- **Granular Configuration:** Vinyl gives you the ability to toggle any UI feature or element that you don't want. You can go from the most minimalist indicator for playing music, all the way to a menu bar lyrics display and drop down media controls with blur and album covers to everything in between. You can use Vinyl how YOU want to.
 
 ## Credits
 Concept inspired by [LYRA](https://github.com/Dai-Ski/LYRA) and [boring.notch](https://github.com/TheBoredTeam/boring.notch).
