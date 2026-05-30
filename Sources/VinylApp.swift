@@ -10,6 +10,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var pollingTask: Task<Void, Never>?
     private var updateTask: Task<Void, Never>?
     private var artworkTask: Task<Void, Never>?
+    private var notificationFetchTask: Task<Void, Never>?
+    private var lyricsFetchTask: Task<Void, Never>?
     private var currentTrackKey = ""
     
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -41,7 +43,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc private func playerStateDidChange(_ notification: Notification) {
-        Task {
+        notificationFetchTask?.cancel()
+        notificationFetchTask = Task {
             await performFetch()
         }
     }
@@ -49,6 +52,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         pollingTask?.cancel()
         updateTask?.cancel()
+        artworkTask?.cancel()
+        notificationFetchTask?.cancel()
+        lyricsFetchTask?.cancel()
+        DistributedNotificationCenter.default().removeObserver(self)
+    }
+    
+    deinit {
+        DistributedNotificationCenter.default().removeObserver(self)
     }
     
     private func performFetch() async {
@@ -82,7 +93,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     } else {
                         await stateActor.setLyricsLoading()
                         
-                        Task {
+                        lyricsFetchTask?.cancel()
+                        lyricsFetchTask = Task {
                             var lyricsLines: [LyricLine]? = nil
                             var fetchError: Error? = nil
                             
@@ -97,9 +109,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                 )
                                 print("Successfully fetched lrclib lyrics")
                             } catch {
+                                if Task.isCancelled { return }
                                 print("Failed to fetch lrclib lyrics: \(error)")
                                 fetchError = error
                             }
+                            
+                            guard !Task.isCancelled else { return }
                             
                             // 2. Fallback to Apple Music Native Offline
                             if lyricsLines == nil && track.player == "Music" {
@@ -110,6 +125,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                     print("Fallback: No native lyrics found for \(track.title)")
                                 }
                             }
+                            
+                            guard !Task.isCancelled else { return }
                             
                             if let finalLyrics = lyricsLines {
                                 await stateActor.setLyricsLoaded(finalLyrics, forKey: newTrackKey)
