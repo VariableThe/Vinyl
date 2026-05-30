@@ -211,7 +211,6 @@ public final class MenuBarEngine: NSObject {
         
         let title: String
         var showOnlyIcon = false
-        var needsScroll = false
         
         if !areLyricsEnabled {
             title = ""
@@ -264,7 +263,6 @@ public final class MenuBarEngine: NSObject {
                         // Pass 200.0 as maxWidth for the text calculation to leave room for the icon, padding, and leading spaces.
                         let scrollResult = getScrolledTitle(lyricText, maxWidth: 200.0, font: font, elapsed: elapsed, duration: lineDuration)
                         title = scrollResult.title
-                        needsScroll = scrollResult.needsScrolling
                     }
                 } else {
                     title = ""

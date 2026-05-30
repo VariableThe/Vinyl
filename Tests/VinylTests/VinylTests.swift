@@ -50,4 +50,23 @@ final class VinylTests: XCTestCase {
         let state = MediaBridge.parseState(from: "stopped", appName: "Spotify")
         XCTAssertEqual(state, .stopped)
     }
+
+    func testLyricLineCodable() throws {
+        let line1 = LyricLine(timestamp: 12.5, text: "Hello World")
+        let line2 = LyricLine(timestamp: 20.0, text: "Testing Codable")
+        let cache: [String: [LyricLine]] = ["Track1": [line1, line2]]
+        
+        let encoder = JSONEncoder()
+        let data = try encoder.encode(cache)
+        
+        let decoder = JSONDecoder()
+        let decoded = try decoder.decode([String: [LyricLine]].self, from: data)
+        
+        XCTAssertEqual(decoded.keys.count, 1)
+        XCTAssertEqual(decoded["Track1"]?.count, 2)
+        XCTAssertEqual(decoded["Track1"]?[0].timestamp, 12.5)
+        XCTAssertEqual(decoded["Track1"]?[0].text, "Hello World")
+        XCTAssertEqual(decoded["Track1"]?[1].timestamp, 20.0)
+        XCTAssertEqual(decoded["Track1"]?[1].text, "Testing Codable")
+    }
 }
