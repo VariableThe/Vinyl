@@ -35,11 +35,27 @@ jobs:
         tag_name: ${{ steps.tag_version.outputs.new_tag }}
         files: Vinyl.zip
 
-    - name: Update Homebrew tap
-      uses: mislav/bump-homebrew-formula-action@v3
+    - name: Checkout tap
+      uses: actions/checkout@v4
       with:
-        formula-name: vinyl
-        homebrew-tap: VariableThe/homebrew-tap
-        download-url: https://github.com/VariableThe/Vinyl/releases/download/${{ steps.tag_version.outputs.new_tag }}/Vinyl.zip
-      env:
-        COMMITTER_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+        repository: VariableThe/homebrew-tap
+        token: ${{ secrets.TAP_GITHUB_TOKEN }}
+        path: homebrew-tap
+
+    - name: Update Homebrew tap
+      run: |
+        cd homebrew-tap
+        # Calculate SHA256 of the new zip
+        SHA256=$(shasum -a 256 ../Vinyl.zip | awk '{print $1}')
+        VERSION="${{ steps.tag_version.outputs.new_version }}"
+        
+        # Update version and sha256 in the Cask
+        sed -i '' "s/version \".*\"/version \"$VERSION\"/g" Casks/vinyl.rb
+        sed -i '' "s/sha256 \".*\"/sha256 \"$SHA256\"/g" Casks/vinyl.rb
+        
+        # Commit and push
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add Casks/vinyl.rb
+        git commit -m "Bump Vinyl to v$VERSION"
+        git push
