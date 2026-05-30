@@ -25,3 +25,12 @@ jobs:
       uses: softprops/action-gh-release@v3
       with:
         files: Vinyl.zip
+
+    - name: Update Homebrew tap
+      uses: mislav/bump-homebrew-formula-action@v3
+      with:
+        formula-name: vinyl
+        homebrew-tap: VariableThe/homebrew-tap
+        download-url: https://github.com/VariableThe/Vinyl/releases/download/${{ github.ref_name }}/Vinyl.zip
+      env:
+        COMMITTER_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
