@@ -1,0 +1,27 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build App
+      run: make app
+      
+    - name: Zip App
+      run: zip -r Vinyl.zip Vinyl.app
+      
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: Vinyl.zip

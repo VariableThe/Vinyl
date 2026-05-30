@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var pollingTask: Task<Void, Never>?
     private var updateTask: Task<Void, Never>?
     private var artworkTask: Task<Void, Never>?
+    private var currentTrackKey = ""
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         stateActor = AppStateActor()
@@ -24,6 +25,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updateTask = Task {
             await startUpdateLoop()
         }
+        
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(playerStateDidChange),
+            name: NSNotification.Name("com.apple.Music.playerInfo"),
+            object: nil
+        )
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(playerStateDidChange),
+            name: NSNotification.Name("com.spotify.client.PlaybackStateChanged"),
+            object: nil
+        )
+    }
+    
+    @objc private func playerStateDidChange(_ notification: Notification) {
+        Task {
+            await performFetch()
+        }
     }
     
     func applicationWillTerminate(_ notification: Notification) {
@@ -31,87 +51,89 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updateTask?.cancel()
     }
     
-    private func startPollingLoop() async {
-        var currentTrackKey = ""
-        
-        while true {
-            guard !Task.isCancelled else { break }
-            do {
-                let state = try await bridge.fetchCurrentState()
-                await stateActor.updatePlayback(state: state)
-                
-                let track: Track?
-                switch state {
-                case .playing(let t, _), .paused(let t, _):
-                    track = t
-                default:
-                    track = nil
-                }
-                
-                if let track = track {
-                    let newTrackKey = track.trackKey
-                    if newTrackKey != currentTrackKey && !newTrackKey.isEmpty {
-                        currentTrackKey = newTrackKey
-                        print("Now playing: \(track.title) by \(track.artist)")
+    private func performFetch() async {
+        do {
+            let state = try await bridge.fetchCurrentState()
+            await stateActor.updatePlayback(state: state)
+            
+            let track: Track?
+            switch state {
+            case .playing(let t, _), .paused(let t, _):
+                track = t
+            default:
+                track = nil
+            }
+            
+            if let track = track {
+                let newTrackKey = track.trackKey
+                if newTrackKey != currentTrackKey && !newTrackKey.isEmpty {
+                    currentTrackKey = newTrackKey
+                    print("Now playing: \(track.title) by \(track.artist)")
+                    
+                    artworkTask?.cancel()
+                    artworkTask = Task {
+                        let artworkData = await bridge.fetchArtwork(for: track.player)
+                        guard !Task.isCancelled else { return }
+                        await stateActor.setArtwork(artworkData)
+                    }
+                    
+                    if let cached = await stateActor.getCachedLyrics(forKey: newTrackKey) {
+                        await stateActor.setLyricsLoaded(cached, forKey: newTrackKey)
+                    } else {
+                        await stateActor.setLyricsLoading()
                         
-                        artworkTask?.cancel()
-                        artworkTask = Task {
-                            let artworkData = await bridge.fetchArtwork(for: track.player)
-                            guard !Task.isCancelled else { return }
-                            await stateActor.setArtwork(artworkData)
-                        }
-                        
-                        if let cached = await stateActor.getCachedLyrics(forKey: newTrackKey) {
-                            await stateActor.setLyricsLoaded(cached, forKey: newTrackKey)
-                        } else {
-                            await stateActor.setLyricsLoading()
+                        Task {
+                            var lyricsLines: [LyricLine]? = nil
+                            var fetchError: Error? = nil
                             
-                            Task {
-                                var lyricsLines: [LyricLine]? = nil
-                                var fetchError: Error? = nil
-                                
-                                // 1. Try LRCLIB
-                                do {
-                                    print("Fetching lrclib lyrics for \(track.title)")
-                                    lyricsLines = try await client.fetchLyrics(
-                                        track: track.title,
-                                        artist: track.artist,
-                                        album: track.album,
-                                        duration: track.duration
-                                    )
-                                    print("Successfully fetched lrclib lyrics")
-                                } catch {
-                                    print("Failed to fetch lrclib lyrics: \(error)")
-                                    fetchError = error
-                                }
-                                
-                                // 2. Fallback to Apple Music Native Offline
-                                if lyricsLines == nil && track.player == "Music" {
-                                    if let nativeText = await bridge.fetchAppleMusicLyrics() {
-                                        print("Fallback: Fetched native lyrics for \(track.title)")
-                                        lyricsLines = client.parseLyrics(nativeText)
-                                    } else {
-                                        print("Fallback: No native lyrics found for \(track.title)")
-                                    }
-                                }
-                                
-                                if let finalLyrics = lyricsLines {
-                                    await stateActor.setLyricsLoaded(finalLyrics, forKey: newTrackKey)
-                                } else if let error = fetchError {
-                                    await stateActor.setLyricsError(error.localizedDescription, forKey: newTrackKey)
+                            // 1. Try LRCLIB
+                            do {
+                                print("Fetching lrclib lyrics for \(track.title)")
+                                lyricsLines = try await client.fetchLyrics(
+                                    track: track.title,
+                                    artist: track.artist,
+                                    album: track.album,
+                                    duration: track.duration
+                                )
+                                print("Successfully fetched lrclib lyrics")
+                            } catch {
+                                print("Failed to fetch lrclib lyrics: \(error)")
+                                fetchError = error
+                            }
+                            
+                            // 2. Fallback to Apple Music Native Offline
+                            if lyricsLines == nil && track.player == "Music" {
+                                if let nativeText = await bridge.fetchAppleMusicLyrics() {
+                                    print("Fallback: Fetched native lyrics for \(track.title)")
+                                    lyricsLines = client.parseLyrics(nativeText)
                                 } else {
-                                    await stateActor.setLyricsError("Lyrics not found", forKey: newTrackKey)
+                                    print("Fallback: No native lyrics found for \(track.title)")
                                 }
+                            }
+                            
+                            if let finalLyrics = lyricsLines {
+                                await stateActor.setLyricsLoaded(finalLyrics, forKey: newTrackKey)
+                            } else if let error = fetchError {
+                                await stateActor.setLyricsError(error.localizedDescription, forKey: newTrackKey)
+                            } else {
+                                await stateActor.setLyricsError("Lyrics not found", forKey: newTrackKey)
                             }
                         }
                     }
-                } else {
-                    currentTrackKey = ""
                 }
-            } catch {
-                print("Polling error: \(error)")
-                await stateActor.updatePlayback(state: .notRunning)
+            } else {
+                currentTrackKey = ""
             }
+        } catch {
+            print("Polling error: \(error)")
+            await stateActor.updatePlayback(state: .notRunning)
+        }
+    }
+    
+    private func startPollingLoop() async {
+        while true {
+            guard !Task.isCancelled else { break }
+            await performFetch()
             
             do {
                 var currentInterval = UserDefaults.standard.double(forKey: "pollingInterval")
