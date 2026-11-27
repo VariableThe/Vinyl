@@ -119,53 +119,33 @@ public struct LyricsClient: Sendable {
     
     public func parseLyrics(_ content: String) -> [LyricLine] {
         let rawLines = content.components(separatedBy: .newlines)
-        var lines: [LyricLine] = []
-        
-        var isSynced = false
+        let timestamp = /\[([0-9]+):([0-9]{1,2}(?:\.[0-9]+)?)\]/
+        var synced: [LyricLine] = []
+
         for rawLine in rawLines {
-            let trimmed = rawLine.trimmingCharacters(in: .whitespaces)
-            if trimmed.hasPrefix("[") && trimmed.contains("]") {
-                if let closeBracket = trimmed.firstIndex(of: "]"),
-                   trimmed[..<closeBracket].contains(":") {
-                    isSynced = true
-                    break
-                }
+            var rest = rawLine.trimmingCharacters(in: .whitespaces)[...]
+            var times: [Double] = []
+            // Repeated timestamps on one LRC line mark the same lyric at multiple positions.
+            while let match = rest.prefixMatch(of: timestamp),
+                  let minutes = Double(match.1), let seconds = Double(match.2), seconds < 60 {
+                let time = minutes * 60 + seconds
+                guard time.isFinite else { break }
+                times.append(time)
+                rest = rest[match.range.upperBound...]
             }
+            guard !times.isEmpty else { continue }
+            let text = rest.trimmingCharacters(in: .whitespaces)
+            synced.append(contentsOf: times.map { LyricLine(timestamp: $0, text: text) })
         }
-        
-        if isSynced {
-            for rawLine in rawLines {
-                let trimmed = rawLine.trimmingCharacters(in: .whitespaces)
-                guard trimmed.hasPrefix("["), let closingBracketIndex = trimmed.firstIndex(of: "]") else {
-                    continue
-                }
-                
-                let timestampPart = trimmed[trimmed.index(after: trimmed.startIndex)..<closingBracketIndex]
-                let lyricPart = trimmed[trimmed.index(after: closingBracketIndex)...].trimmingCharacters(in: .whitespaces)
-                
-                let timeComponents = timestampPart.split(separator: ":")
-                guard timeComponents.count == 2 else { continue }
-                
-                guard let minutes = Double(timeComponents[0]),
-                      let seconds = Double(timeComponents[1]) else {
-                    continue
-                }
-                
-                let totalSeconds = (minutes * 60.0) + seconds
-                lines.append(LyricLine(timestamp: totalSeconds, text: lyricPart))
-            }
-        } else {
-            lines.append(LyricLine(timestamp: 0.0, text: "[Synced lyrics not available. Displaying plain text]"))
-            var validIndex = 0
-            for rawLine in rawLines {
-                let trimmed = rawLine.trimmingCharacters(in: .whitespaces)
-                if !trimmed.isEmpty {
-                    lines.append(LyricLine(timestamp: Double(validIndex + 1) * 4.0, text: trimmed))
-                    validIndex += 1
-                }
-            }
+
+        // Section headings such as "[Verse 1: Duet]" are not timestamps.
+        if !synced.isEmpty { return synced.sorted { $0.timestamp < $1.timestamp } }
+
+        var plain = [LyricLine(timestamp: 0, text: "[Synced lyrics not available. Displaying plain text]")]
+        for rawLine in rawLines {
+            let text = rawLine.trimmingCharacters(in: .whitespaces)
+            if !text.isEmpty { plain.append(LyricLine(timestamp: Double(plain.count) * 4, text: text)) }
         }
-        
-        return lines.sorted { $0.timestamp < $1.timestamp }
+        return plain
     }
 }
