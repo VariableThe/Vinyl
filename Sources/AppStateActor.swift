@@ -21,10 +21,13 @@ public actor AppStateActor {
             try? fileManager.createDirectory(at: appDirURL, withIntermediateDirectories: true)
         }
         
-        let url = appDirURL.appendingPathComponent("lyrics_cache.json")
-        cacheFileURL = url
-        
-        if let data = try? Data(contentsOf: url),
+        self.init(cacheFileURL: appDirURL.appendingPathComponent("lyrics_cache.json"))
+    }
+
+    init(cacheFileURL: URL) {
+        self.cacheFileURL = cacheFileURL
+
+        if let data = try? Data(contentsOf: cacheFileURL),
            let decoded = try? JSONDecoder().decode([String: [LyricLine]].self, from: data) {
             lyricsCache = decoded
         }
@@ -50,12 +53,22 @@ public actor AppStateActor {
         self.lastUpdated = Date()
     }
     
+    private var activeTrackKey: String? {
+        switch state {
+        case .playing(let track, _), .paused(let track, _):
+            return track.trackKey
+        case .stopped, .notRunning:
+            return nil
+        }
+    }
+
     public func setLyricsLoading() {
         self.lyricsStatus = .loading
         self.currentLyrics = []
     }
     
     public func setLyricsLoaded(_ lyrics: [LyricLine], forKey key: String) {
+        guard key == activeTrackKey else { return }
         self.lyricsStatus = .loaded
         self.currentLyrics = lyrics
         self.lyricsCache[key] = lyrics
@@ -63,11 +76,13 @@ public actor AppStateActor {
     }
     
     public func setLyricsNotFound(forKey key: String) {
+        guard key == activeTrackKey else { return }
         self.lyricsStatus = .notFound
         self.currentLyrics = []
     }
     
     public func setLyricsError(_ msg: String, forKey key: String) {
+        guard key == activeTrackKey else { return }
         self.lyricsStatus = .error(msg)
         self.currentLyrics = []
     }
