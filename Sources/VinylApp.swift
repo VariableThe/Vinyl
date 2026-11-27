@@ -88,7 +88,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         await stateActor.setArtwork(artworkData)
                     }
                     
-                    if let cached = await stateActor.getCachedLyrics(forKey: newTrackKey) {
+                    // Older versions could cache an empty array for plain lyrics with section headings.
+                    if let cached = await stateActor.getCachedLyrics(forKey: newTrackKey), !cached.isEmpty {
                         await stateActor.setLyricsLoaded(cached, forKey: newTrackKey)
                     } else {
                         await stateActor.setLyricsLoading()

@@ -31,6 +31,24 @@ final class VinylTests: XCTestCase {
         XCTAssertEqual(parsed[2].text, "Line 2")
     }
 
+    func testPlainHeadingsWithColonsDoNotHideLyrics() {
+        let parsed = LyricsClient().parseLyrics("[Verse 1: Guest]\r\nA plain lyric\r\n[Chorus: Both]")
+        XCTAssertEqual(parsed.map(\.timestamp), [0, 4, 8, 12])
+        XCTAssertEqual(Array(parsed.dropFirst()).map(\.text), ["[Verse 1: Guest]", "A plain lyric", "[Chorus: Both]"])
+    }
+
+    func testRepeatedTimestampsReuseTextAndInterleaveInPlaybackOrder() {
+        let parsed = LyricsClient().parseLyrics("[ar:Guest]\n[1:02.75][00:03] Chorus\n[00:12.5] [voice] Solo\n[00:19]")
+        XCTAssertEqual(parsed.map(\.timestamp), [3, 12.5, 19, 62.75])
+        XCTAssertEqual(parsed.map(\.text), ["Chorus", "[voice] Solo", "", "Chorus"])
+    }
+
+    func testMalformedTimesDoNotBecomePlaybackPositions() {
+        let parsed = LyricsClient().parseLyrics("[01:nan] bad\n[01:60] bad\n[-1:12] bad\n[00:00] music")
+        XCTAssertEqual(parsed.map(\.timestamp), [0])
+        XCTAssertEqual(parsed.map(\.text), ["music"])
+    }
+
     func testMediaBridgeParseStatePlaying() {
         let stateStr = "Song Name||Artist Name||Album Name||120.5||60.2||playing"
         let state = MediaBridge.parseState(from: stateStr, appName: "Music")
